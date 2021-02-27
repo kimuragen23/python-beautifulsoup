@@ -79,6 +79,7 @@ page_count = 1
 total_page_num = math.ceil(total_page_num / 10)
 print(total_page_num)
 while page_count <= total_page_num:
+    print(total_page_num)
     policy_count_url = 'https://www.gov.kr/portal/gvrnPolicy?srchOrder=&policyType=G00301&streamYn=&blgCd=&slgCd=&srchBlgCd=&srchSlgCd=&srchOrgGroup=&srchOriginOrg=&srchPeriodOption=1years&srchStDtFmt=2020.02.25&srchEdDtFmt=2021.02.25&searchField=3&srchTxt=&srchTxt2=&pageIndex='+str(total_page_num)
     response = requests.get(policy_count_url)
     if response.status_code == 200:
