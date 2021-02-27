@@ -3,6 +3,7 @@ import requests
 from bs4 import BeautifulSoup
 import json
 from collections import OrderedDict
+import math
 
 """
     title_href = title_href.split("'")[1]
@@ -54,30 +55,52 @@ def title_classification(title, gov, policy_detail_data):
         # print(data)
 
 
-policy_index_url = 'https://www.gov.kr/portal/gvrnPolicy?srchOrder=&pageIndex=1&policyType=G00301&streamYn=&blgCd=&slgCd=&srchBlgCd=&srchSlgCd=&srchOrgGroup=&srchOriginOrg=&srchPeriodOption=1years&srchStDtFmt=2020.02.25&srchEdDtFmt=2021.02.25&searchField=3&srchTxt=&srchTxt2='
+policy_index_url = 'https://www.gov.kr/portal/gvrnPolicy?srchOrder=&policyType=G00301&streamYn=&blgCd=&slgCd=&srchBlgCd=&srchSlgCd=&srchOrgGroup=&srchOriginOrg=&srchPeriodOption=1years&srchStDtFmt=2020.02.25&srchEdDtFmt=2021.02.25&searchField=3&srchTxt=&srchTxt2=&pageIndex=1'
+total_page = requests.get(policy_index_url)
+total_page_num = 0
+if total_page.status_code == 200:
+    html = total_page.text
+    soup = BeautifulSoup(html, 'html.parser')
+    page = soup.select_one('div.contentsWrap.policy_cont.renew2019 > div > div > div.tabcontainer.ty2 > div > div > ul > li.active > a > span.dd > strong')
+    page = page.get_text()
+    page = page.replace(" ","")
+    page = page.replace("\n","")
+    page = page.replace("(","")
+    page = page.replace(")","")
+    page = page.replace(",","")
+    total_page_num = int(page)
+else : 
+    print(total_page.status_code)  
+
+
 policy_list_data = OrderedDict()
 policy_list_json = []
-
-response = requests.get(policy_index_url)
-if response.status_code == 200:
-    html = response.text
-    soup = BeautifulSoup(html, 'html.parser')
-    ul = soup.select_one('div.contentsWrap.policy_cont.renew2019 > div > div > div.tabcontainer.ty2 > div > ul')
-    li = ul.select('li')
-    for li_index in li:
-        title_index = li_index.select("div.right_detail > dl > dt > a")
-        title_href = title_index[0]['href']
-        title = title_index[0].get_text()
-        title = title.replace(" ","")
-        title = title.replace("\n","")
-        date_index = li_index.select("div > div > span:nth-child(2)")
-        date_index = date_index[0].get_text()
-        policy_list_url = make_policy_url(title_href.split("'")[1])
-        policy_list_data = {"url":policy_list_url ,"title":title,"date":date_index}
-        policy_list_json.append(policy_list_data)
-    #print(json.dumps(policy_list_json, ensure_ascii=False, indent="\t"))
-else : 
-    print(response.status_code)
+page_count = 1 
+total_page_num = math.ceil(total_page_num / 10)
+print(total_page_num)
+while page_count <= total_page_num:
+    policy_count_url = 'https://www.gov.kr/portal/gvrnPolicy?srchOrder=&policyType=G00301&streamYn=&blgCd=&slgCd=&srchBlgCd=&srchSlgCd=&srchOrgGroup=&srchOriginOrg=&srchPeriodOption=1years&srchStDtFmt=2020.02.25&srchEdDtFmt=2021.02.25&searchField=3&srchTxt=&srchTxt2=&pageIndex='+str(total_page_num)
+    response = requests.get(policy_count_url)
+    if response.status_code == 200:
+        html = response.text
+        soup = BeautifulSoup(html, 'html.parser')
+        ul = soup.select_one('div.contentsWrap.policy_cont.renew2019 > div > div > div.tabcontainer.ty2 > div > ul')
+        li = ul.select('li')
+        for li_index in li:
+            title_index = li_index.select("div.right_detail > dl > dt > a")
+            title_href = title_index[0]['href']
+            title = title_index[0].get_text()
+            title = title.replace(" ","")
+            title = title.replace("\n","")
+            date_index = li_index.select("div > div > span:nth-child(2)")
+            date_index = date_index[0].get_text()
+            policy_list_url = make_policy_url(title_href.split("'")[1])
+            policy_list_data = {"url":policy_list_url ,"title":title,"date":date_index}
+            policy_list_json.append(policy_list_data)
+        #print(json.dumps(policy_list_json, ensure_ascii=False, indent="\t"))
+    else : 
+        print(response.status_code)
+    total_page_num -= 1
 
 '''
     정부24 데이터
@@ -112,6 +135,6 @@ for policy_list in policy_list_json:
         print(response.status_code)
     policy_list_count += 1
 policy_detail = json.dumps(policy_detail_json, ensure_ascii=False, indent="\t")
-
-dict = json.loads(policy_detail)
-print(dict[0])
+#print(json.dumps(policy_detail_json, ensure_ascii=False, indent="\t"))
+with open('data.txt', 'w') as outfile:
+    json.dump(policy_detail, outfile)
