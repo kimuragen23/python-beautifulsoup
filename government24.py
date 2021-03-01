@@ -76,7 +76,7 @@ else :
 policy_list_data = OrderedDict()
 policy_list_json = []
 page_count = 1 
-total_page_num = math.ceil(total_page_num / 10)
+total_page_num = 30#math.ceil(total_page_num / 10)
 print(total_page_num)
 while page_count <= total_page_num:
     print(total_page_num)
@@ -86,23 +86,31 @@ while page_count <= total_page_num:
         html = response.text
         soup = BeautifulSoup(html, 'html.parser')
         ul = soup.select_one('div.contentsWrap.policy_cont.renew2019 > div > div > div.tabcontainer.ty2 > div > ul')
+        if ul == None:
+            print("continue")
+            total_page_num -= 1
+            continue
         li = ul.select('li')
-        for li_index in li:
-            title_index = li_index.select("div.right_detail > dl > dt > a")
-            title_href = title_index[0]['href']
-            title = title_index[0].get_text()
-            title = title.replace(" ","")
-            title = title.replace("\n","")
-            date_index = li_index.select("div > div > span:nth-child(2)")
-            date_index = date_index[0].get_text()
-            policy_list_url = make_policy_url(title_href.split("'")[1])
-            policy_list_data = {"url":policy_list_url ,"title":title,"date":date_index}
-            policy_list_json.append(policy_list_data)
+        try:
+            for li_index in li:
+                title_index = li_index.select("div.right_detail > dl > dt > a")
+                title_href = title_index[0]['href']
+                title = title_index[0].get_text()
+                title = title.replace(" ","")
+                title = title.replace("\n","")
+                date_index = li_index.select("div > div > span:nth-child(2)")
+                date_index = date_index[0].get_text()
+                policy_list_url = make_policy_url(title_href.split("'")[1])
+                policy_list_data = {"url":policy_list_url ,"title":title,"date":date_index}
+                policy_list_json.append(policy_list_data)
+        except:
+            print(li)
         #print(json.dumps(policy_list_json, ensure_ascii=False, indent="\t"))
     else : 
         print(response.status_code)
     total_page_num -= 1
-
+with open('policy_list.json', 'w', encoding='UTF-8-sig') as outfile:
+    outfile.write(json.dumps(policy_list_json, ensure_ascii=False))
 '''
     정부24 데이터
     No/구분/분류/자료유형/제목/제공기관/원문출처/등록일/원문보기링크/수집일시(크롤링 date)
@@ -120,22 +128,30 @@ for policy_list in policy_list_json:
         soup = BeautifulSoup(html, 'html.parser')
         name = soup.select_one('div.contentsWrap.policy_cont > div > div > div.tbl-view.gallery-detail > h2')
         ul = soup.select_one('div.contentsWrap.policy_cont > div > div > div.tbl-view.gallery-detail > div.view-title > ul')
+        if ul == None:
+            print("continue")
+            continue
         li = ul.select('li')
-        policy_detail_data["no"] = policy_list_count
-        policy_detail_data["title"] = name.get_text()
-        policy_detail_data["date"] = detail_date
-        for li_index in li:
-            gov    = li_index.select('span.gov')
-            titles = li_index.select('span.title_s')
-            title  = titles[0].get_text()
-            # print(title)
-            if gov:
-                title_classification(title, gov, policy_detail_data)
+        try:
+            policy_detail_data["no"] = policy_list_count
+            policy_detail_data["title"] = name.get_text()
+            policy_detail_data["date"] = detail_date
+            for li_index in li:
+                gov    = li_index.select('span.gov')
+                titles = li_index.select('span.title_s')
+                title  = titles[0].get_text()
+                # print(title)
+                if gov:
+                    title_classification(title, gov, policy_detail_data)
+        except:
+            print(li)
+            continue
         policy_detail_json.append(policy_detail_data)
     else:
         print(response.status_code)
     policy_list_count += 1
 policy_detail = json.dumps(policy_detail_json, ensure_ascii=False, indent="\t")
+policy_detail = policy_detail.replace("\n",'').replace("\t",'')
 #print(json.dumps(policy_detail_json, ensure_ascii=False, indent="\t"))
-with open('data.txt', 'w') as outfile:
-    json.dump(policy_detail, outfile)
+with open('policy_detail.json', 'w', encoding='UTF-8-sig') as outfile:
+    outfile.write(json.dumps(policy_detail, ensure_ascii=False))
